@@ -9,14 +9,14 @@ import wx
 # end wxGlade
 
 # begin wxGlade: extracode
-from SELKIELogger.Config import SLCSerial
+from SELKIELogger.Config import SLCNet
 
 # end wxGlade
 
 
-class SLCSerialConfig(wx.Dialog):
+class SLCNetConfig(wx.Dialog):
     def __init__(self, *args, **kwds):
-        # begin wxGlade: SLCSerialConfig.__init__
+        # begin wxGlade: SLCNetConfig.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
         self.SetTitle(_("SLConfig: Generic Serial Source Type"))
@@ -27,14 +27,14 @@ class SLCSerialConfig(wx.Dialog):
             self,
             wx.ID_ANY,
             _(
-                "Support for recording raw serial data.\nThis data will not be interpreted in anyway, but will be available to extract later.\n\nProvide a reference tag and the hardware connection details below"
+                "Support for recording raw data from a TCP port.\nThis data will not be interpreted in anyway, but will be available to extract later.\n\nProvide a reference tag and the network connection details below"
             ),
             style=wx.ALIGN_LEFT,
         )
         explanation.SetMinSize((-1, 70))
         _cg.Add(explanation, 0, wx.ALL | wx.EXPAND, 2)
 
-        grid_sizer_1 = wx.FlexGridSizer(8, 2, 2, 2)
+        grid_sizer_1 = wx.FlexGridSizer(7, 2, 2, 2)
         _cg.Add(grid_sizer_1, 1, wx.ALL | wx.EXPAND, 2)
 
         _ctTag = wx.StaticText(self, wx.ID_ANY, _("Tag:"))
@@ -59,18 +59,18 @@ class SLCSerialConfig(wx.Dialog):
         self.sourcenum = wx.SpinCtrl(self, wx.ID_ANY, "96", min=0, max=120)
         grid_sizer_1.Add(self.sourcenum, 0, wx.ALL, 2)
 
+        _ctHost = wx.StaticText(self, wx.ID_ANY, _("Host:"))
+        grid_sizer_1.Add(_ctHost, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 2)
+
+        self.host = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.host.SetToolTip(_("e.g. /dev/ttyUSB0, /dev/serial/by-id/xxxxxx"))
+        grid_sizer_1.Add(self.host, 1, wx.ALL | wx.EXPAND, 2)
+
         _ctPort = wx.StaticText(self, wx.ID_ANY, _("Port:"))
         grid_sizer_1.Add(_ctPort, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 2)
 
-        self.port = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.port.SetToolTip(_("e.g. /dev/ttyUSB0, /dev/serial/by-id/xxxxxx"))
-        grid_sizer_1.Add(self.port, 1, wx.ALL | wx.EXPAND, 2)
-
-        _ctBaud = wx.StaticText(self, wx.ID_ANY, _("Baud rate:"))
-        grid_sizer_1.Add(_ctBaud, 0, wx.ALL, 2)
-
-        self.baud = wx.TextCtrl(self, wx.ID_ANY, _("115200"))
-        grid_sizer_1.Add(self.baud, 0, wx.ALL | wx.EXPAND, 2)
+        self.port = wx.SpinCtrl(self, wx.ID_ANY, "100", min=1, max=65535)
+        grid_sizer_1.Add(self.port, 0, wx.ALL, 2)
 
         _ctPSize = wx.StaticText(self, wx.ID_ANY, _("Packet size range:"))
         grid_sizer_1.Add(_ctPSize, 0, wx.ALL, 2)
@@ -95,10 +95,6 @@ class SLCSerialConfig(wx.Dialog):
         self.frequency = wx.SpinCtrl(self, wx.ID_ANY, "10", min=0, max=20)
         grid_sizer_1.Add(self.frequency, 0, wx.ALL, 2)
 
-        grid_sizer_1.Add((0, 0), 0, 0, 0)
-
-        grid_sizer_1.Add((0, 0), 0, 0, 0)
-
         sizer_2 = wx.StdDialogButtonSizer()
         _cg.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
 
@@ -118,10 +114,10 @@ class SLCSerialConfig(wx.Dialog):
         self.SetEscapeId(self.button_CANCEL.GetId())
 
         self.Layout()
-        self.generateSource = lambda: SLCSerial(
+        self.generateSource = lambda: SLCNet(
             tag=self.tag.GetValue(),
-            port=self.port.GetValue(),
-            baud=int(self.baud.GetValue()),
+            port=int(self.port.GetValue()),
+            host=self.host.GetValue(),
             name=self.name.GetValue(),
             sourcenum=self.sourcenum.GetValue(),
             minbytes=self.minpacketsize.GetValue(),
@@ -131,8 +127,8 @@ class SLCSerialConfig(wx.Dialog):
 
         def updateFromSource(s):
             self.tag.SetValue(s.tag)
-            self.port.SetValue(s.port)
-            self.baud.SetValue(str(s.baud))
+            self.port.SetValue(str(s.port))
+            self.host.SetValue(s.host)
             self.name.SetValue(s.name)
             self.sourcenum.SetValue(s.sourcenum)
             self.minpacketsize.SetValue(s.minbytes)
@@ -143,4 +139,4 @@ class SLCSerialConfig(wx.Dialog):
         # end wxGlade
 
 
-# end of class SLCSerialConfig
+# end of class SLCNetConfig

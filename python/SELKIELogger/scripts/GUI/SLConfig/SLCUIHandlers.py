@@ -3,14 +3,18 @@ import wx
 from .SLCChooseType import SLCChooseType
 from .SLCGeneric import SLCGeneric
 from .SLCMPConfig import SLCMPConfig
+from .SLCNetConfig import SLCNetConfig
 from .SLCSerialConfig import SLCSerialConfig
 
 from SELKIELogger.Config import SLCAuto
 
 sourceWindows = {
     "GPS": SLCGeneric,
+    "MP": SLCMPConfig,
     "SL": SLCMPConfig,
     "SERIAL": SLCSerialConfig,
+    "NET": SLCNetConfig,
+    "TCP": SLCNetConfig,
 }
 
 
@@ -19,7 +23,6 @@ def addSource(parent):
         if dlg.ShowModal():
             # Create some config instance class
             if len(dlg.ctType.GetValue()) == 0:
-                print("Blank type")
                 return
             key = dlg.ctType.GetValue().split(":")[0]
         else:
@@ -36,7 +39,20 @@ def addSource(parent):
         if dlg.ShowModal() == wx.ID_OK:
             try:
                 obj = dlg.generateSource()
-                parent.config.addSource(obj)
+                obj = dlg.generateSource()
+                s, e = obj.validate()
+                if s:
+                    parent.config.addSource(obj)
+                else:
+                    m = wx.MessageDialog(
+                        dlg,
+                        caption="Failed to add source",
+                        message="Source settings failed validation checks",
+                        style=wx.ICON_WARNING,
+                    )
+                    errs = "\n".join(e)
+                    m.SetExtendedMessage(f"Additional details:\n{errs}")
+                    m.ShowModal()
             except Exception as e:
                 m = wx.MessageDialog(
                     dlg,
@@ -74,11 +90,24 @@ def editSource(parent):
         editWindow = sourceWindows[sourceType]
 
     with editWindow(parent, title=f"Edit source: {tag}") as dlg:
-        dlg.updateFromSource(parent.sources[tag])
+        dlg.updateFromSource(parent.config.sources[tag])
         if dlg.ShowModal() == wx.ID_OK:
             try:
                 obj = dlg.generateSource()
-                parent.config.updateSource(obj)
+                s, e = obj.validate()
+                if s:
+                    parent.config.updateSource(obj)
+                else:
+                    m = wx.MessageDialog(
+                        dlg,
+                        caption="Failed to update source",
+                        message="Source settings failed validation checks",
+                        style=wx.ICON_WARNING,
+                    )
+                    errs = "\n".join(e)
+                    m.SetExtendedMessage(f"Additional details:\n{errs}")
+                    m.ShowModal()
+
             except Exception as e:
                 m = wx.MessageDialog(
                     dlg,
@@ -131,9 +160,12 @@ def updateGrid(main):
             main.sourcelist.SetCellValue(
                 row=rn, col=1, s=str(main.config.sources[i].sourceType)
             )
-            main.sourcelist.SetCellValue(row=rn, col=2, s=str(main.config.sources[i]))
+            main.sourcelist.SetCellValue(
+                row=rn, col=2, s=main.config.sources[i].summary()
+            )
             rn += 1
         if rn < main.sourcelist.GetNumberRows():
             main.sourcelist.DeleteRows(rn, main.sourcelist.GetNumberRows() - rn)
     finally:
+        main.sourcelist.AutoSizeColumns()
         main.sourcelist.EndBatch()
