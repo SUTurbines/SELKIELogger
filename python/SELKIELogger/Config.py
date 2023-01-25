@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields
 from .SLMessages import IDs
 
 import logging
@@ -89,6 +89,7 @@ class SLConfiguration:
             f.write(f"statefile = {self.statefile}\n")
             f.write(f"prefix = {self.dataprefix}\n")
             f.write(f"verbose = {self.verbose}\n")
+            f.write("\n")
 
             sd = {}
             for stag in self.sources:
@@ -120,7 +121,6 @@ class SLConfiguration:
         slc.verbose = core.get("verbose", fallback=slc.verbose)
 
         for section in c:
-            print(section)
             if section == "_core_" or section is None:
                 continue
             if "type" in c[section]:
@@ -137,11 +137,15 @@ class SLConfiguration:
         if d.get(field, None) is None:
             return default
         value = d.get(field)
+        return SLConfiguration.bool(value)
+
+    @staticmethod
+    def bool(value):
         if isinstance(value, bool):
             return value
         else:
             try:
-                return configparser.ConfigParser.BOOLEAN_STATES[value]
+                return configparser.ConfigParser.BOOLEAN_STATES[str(value).lower()]
             except KeyError:
                 raise ValueError(
                     f"Unable to interpret {field} value '{value}' as boolean"
@@ -171,10 +175,26 @@ class SLCSource:
             kwargs["sourcetype"] = kwargs["type"]
             del kwargs["type"]
 
+        tag = None
+        if "tag" in kwargs:
+            tag = kwargs["tag"]
+            del kwargs["tag"]
+
         if "sourcenum" in kwargs:
             kwargs["sourcenum"] = int(kwargs["sourcenum"], 0)
 
-        return cls(**kwargs)
+        for f in fields(cls):
+            k = f.name.lower()
+            if not k in kwargs:
+                continue
+
+            t = f.type
+            if t == bool:
+                t = SLConfiguration.bool
+
+            kwargs[k] = t(kwargs.get(k, f.default))
+
+        return cls(tag=tag, **kwargs)
 
     def validate(self):
         errors = []
@@ -218,7 +238,6 @@ class SLCUnknown(SLCSource):
         d = super().dict()
         del d["params"]
         for line in self.params:
-            print(line)
             s = line.split("=")
             k = s[0].strip()
             v = " ".join(s[1:]).strip()
