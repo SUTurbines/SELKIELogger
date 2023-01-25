@@ -9,18 +9,18 @@ import wx
 # end wxGlade
 
 # begin wxGlade: extracode
-from SELKIELogger.Config import SLCNet
+from SELKIELogger.Config import SLCDW
 
 # end wxGlade
 
 
-class SLCNetConfig(wx.Dialog):
+class SLCDWConfig(wx.Dialog):
     def __init__(self, *args, **kwds):
-        # begin wxGlade: SLCNetConfig.__init__
+        # begin wxGlade: SLCDWConfig.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
-        self.SetSize((550, 440))
-        self.SetTitle(_("SLConfig: Generic Network Source Type"))
+        self.SetSize((550, 400))
+        self.SetTitle(_("SLConfig: Datawell receiver"))
 
         _cg = wx.BoxSizer(wx.VERTICAL)
 
@@ -28,15 +28,15 @@ class SLCNetConfig(wx.Dialog):
             self,
             wx.ID_ANY,
             _(
-                "Support for recording raw data from a TCP port.\nThis data will not be interpreted in anyway, but will be available to extract later.\n\nProvide a reference tag and the network connection details below"
+                "Parse data from a Datawell wavebuoy receiver, optionally including spectral data or recording a copy of raw data for later analysis in other software.\n\nProvide a reference tag and the network connection details below"
             ),
             style=wx.ALIGN_LEFT,
         )
-        explanation.SetMinSize((-1, 80))
+        explanation.SetMinSize((-1, 70))
         explanation.Wrap(500)
         _cg.Add(explanation, 0, wx.ALL | wx.EXPAND, 2)
 
-        grid_sizer_1 = wx.FlexGridSizer(7, 2, 2, 2)
+        grid_sizer_1 = wx.FlexGridSizer(6, 2, 2, 2)
         _cg.Add(grid_sizer_1, 1, wx.ALL | wx.EXPAND, 2)
 
         _ctTag = wx.StaticText(self, wx.ID_ANY, _("Tag:"))
@@ -58,7 +58,7 @@ class SLCNetConfig(wx.Dialog):
             _ctSourceNumber, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 2
         )
 
-        self.sourcenum = wx.SpinCtrl(self, wx.ID_ANY, "96", min=1, max=120)
+        self.sourcenum = wx.SpinCtrl(self, wx.ID_ANY, "96", min=0, max=120)
         grid_sizer_1.Add(self.sourcenum, 0, wx.ALL, 2)
 
         _ctHost = wx.StaticText(self, wx.ID_ANY, _("Host:"))
@@ -68,34 +68,19 @@ class SLCNetConfig(wx.Dialog):
         self.host.SetToolTip(_("e.g. /dev/ttyUSB0, /dev/serial/by-id/xxxxxx"))
         grid_sizer_1.Add(self.host, 1, wx.ALL | wx.EXPAND, 2)
 
-        _ctPort = wx.StaticText(self, wx.ID_ANY, _("Port:"))
-        grid_sizer_1.Add(_ctPort, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 2)
+        _ctTimeout = wx.StaticText(self, wx.ID_ANY, _("Timeout (s):"))
+        grid_sizer_1.Add(
+            _ctTimeout, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 2
+        )
 
-        self.port = wx.SpinCtrl(self, wx.ID_ANY, "9999", min=1, max=65534)
-        grid_sizer_1.Add(self.port, 0, wx.ALL, 2)
+        self.timeout = wx.SpinCtrl(self, wx.ID_ANY, "100", min=60, max=1800)
+        grid_sizer_1.Add(self.timeout, 0, wx.ALL, 2)
 
-        _ctPSize = wx.StaticText(self, wx.ID_ANY, _("Packet size range:"))
-        grid_sizer_1.Add(_ctPSize, 0, wx.ALL, 2)
+        self.spectrum = wx.CheckBox(self, wx.ID_ANY, _("Parse spectral information"))
+        grid_sizer_1.Add(self.spectrum, 0, wx.ALL, 2)
 
-        psizes = wx.BoxSizer(wx.HORIZONTAL)
-        grid_sizer_1.Add(psizes, 1, wx.ALL | wx.EXPAND, 1)
-
-        self.minpacketsize = wx.SpinCtrl(self, wx.ID_ANY, "10", min=0, max=1024)
-        self.minpacketsize.SetMinSize((160, -1))
-        psizes.Add(self.minpacketsize, 0, wx.ALL, 2)
-
-        _ctTo = wx.StaticText(self, wx.ID_ANY, _("to"))
-        psizes.Add(_ctTo, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
-
-        self.maxpacketsize = wx.SpinCtrl(self, wx.ID_ANY, "100", min=0, max=1024)
-        self.maxpacketsize.SetMinSize((160, -1))
-        psizes.Add(self.maxpacketsize, 0, wx.ALL, 2)
-
-        _ctFreq = wx.StaticText(self, wx.ID_ANY, _("Frequency"))
-        grid_sizer_1.Add(_ctFreq, 0, wx.ALL, 2)
-
-        self.frequency = wx.SpinCtrl(self, wx.ID_ANY, "10", min=0, max=20)
-        grid_sizer_1.Add(self.frequency, 0, wx.ALL, 2)
+        self.raw = wx.CheckBox(self, wx.ID_ANY, _("Keep copy of raw data"))
+        grid_sizer_1.Add(self.raw, 0, wx.ALL, 2)
 
         sizer_2 = wx.StdDialogButtonSizer()
         _cg.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
@@ -109,39 +94,40 @@ class SLCNetConfig(wx.Dialog):
 
         sizer_2.Realize()
 
+        grid_sizer_1.AddGrowableCol(0)
+        grid_sizer_1.AddGrowableCol(1)
+
         self.SetSizer(_cg)
 
         self.SetAffirmativeId(self.button_OK.GetId())
         self.SetEscapeId(self.button_CANCEL.GetId())
 
         self.Layout()
-        self.port.SetValue(9999)
         self.sourcenum.SetBase(16)
         self.sourcenum.SetValue(0x60)
+        self.timeout.SetValue(180)
 
-        self.generateSource = lambda: SLCNet(
+        self.generateSource = lambda: SLCDW(
             tag=self.tag.GetValue(),
-            port=int(self.port.GetValue()),
+            timeout=int(self.timeout.GetValue()),
             host=self.host.GetValue(),
             name=self.name.GetValue(),
             sourcenum=self.sourcenum.GetValue(),
-            minbytes=self.minpacketsize.GetValue(),
-            maxbytes=self.maxpacketsize.GetValue(),
-            frequency=self.frequency.GetValue(),
+            spectrum=self.spectrum.GetValue(),
+            raw=self.raw.GetValue(),
         )
 
         def updateFromSource(s):
             self.tag.SetValue(s.tag)
-            self.port.SetValue(str(s.port))
+            self.timeout.SetValue(str(s.timeout))
             self.host.SetValue(s.host)
             self.name.SetValue(s.name)
             self.sourcenum.SetValue(s.sourcenum)
-            self.minpacketsize.SetValue(s.minbytes)
-            self.maxpacketsize.SetValue(s.maxbytes)
-            self.frequency.SetValue(s.frequency)
+            self.spectrum.SetValue(s.spectrum)
+            self.raw.SetValue(s.raw)
 
         self.updateFromSource = updateFromSource
         # end wxGlade
 
 
-# end of class SLCNetConfig
+# end of class SLCDWConfig

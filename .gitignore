@@ -9,3 +9,4 @@ pdfs/
 python/instance/
 python/dist/
 python/build/
+*.py~

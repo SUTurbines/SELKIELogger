@@ -2,13 +2,16 @@ import wx
 
 from .SLCChooseType import SLCChooseType
 from .SLCGeneric import SLCGeneric
+
+from .SLCDWConfig import SLCDWConfig
 from .SLCMPConfig import SLCMPConfig
 from .SLCNetConfig import SLCNetConfig
 from .SLCSerialConfig import SLCSerialConfig
 
-from SELKIELogger.Config import SLCAuto
+from SELKIELogger.Config import SLConfiguration, SLCAuto, SourceTypes
 
 sourceWindows = {
+    "DW": SLCDWConfig,
     "GPS": SLCGeneric,
     "MP": SLCMPConfig,
     "SL": SLCMPConfig,
@@ -16,6 +19,24 @@ sourceWindows = {
     "NET": SLCNetConfig,
     "TCP": SLCNetConfig,
 }
+
+
+def readConfigFile(parent):
+    parent.config = SLConfiguration.read("/tmp/test.ini")
+    updateFromConfig(parent)
+    updateGrid(parent)
+
+
+def updateFromConfig(parent):
+    if getattr(parent, "config", None) is None:
+        return
+
+    parent.datPrefix.SetValue(parent.config.dataprefix)
+    parent.frequency.SetValue(parent.config.frequency)
+    parent.rotate.SetValue(parent.config.rotate)
+    parent.saveState.SetValue(parent.config.savestate)
+    parent.statePath.SetValue(parent.config.statefile)
+    parent.verbose.SetValue(parent.config.verbose)
 
 
 def addSource(parent):
@@ -85,9 +106,9 @@ def editSource(parent):
 
     editWindow = SLCGeneric
     tag = parent.sourcelist.GetCellValue(row=rows[0], col=0)
-    sourceType = parent.sourcelist.GetCellValue(row=rows[0], col=1)
-    if sourceType in sourceWindows:
-        editWindow = sourceWindows[sourceType]
+    sourcetype = parent.sourcelist.GetCellValue(row=rows[0], col=1).upper()
+    if sourcetype in sourceWindows:
+        editWindow = sourceWindows[sourcetype]
 
     with editWindow(parent, title=f"Edit source: {tag}") as dlg:
         dlg.updateFromSource(parent.config.sources[tag])
@@ -158,7 +179,7 @@ def updateGrid(main):
                 row=rn, col=0, s=str(main.config.sources[i].tag)
             )
             main.sourcelist.SetCellValue(
-                row=rn, col=1, s=str(main.config.sources[i].sourceType)
+                row=rn, col=1, s=str(main.config.sources[i].sourcetype).upper()
             )
             main.sourcelist.SetCellValue(
                 row=rn, col=2, s=main.config.sources[i].summary()
